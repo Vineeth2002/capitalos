@@ -1,93 +1,79 @@
-# CapitalOS - Backend (Milestone 1)
+# CapitalOS
+# CapitalOS
 
-CapitalOS is a structured reasoning and decision intelligence system. It is
-being built incrementally; this repository currently implements **Milestone 1**
-only.
+CapitalOS is a structured reasoning and decision intelligence system. It helps
+turn investment research into explicit, structured claims rather than
+unstructured notes - so reasoning can be tracked, related, challenged, and
+revisited over time.
 
-## What CapitalOS Is
+The long-term vision includes Fundamental, Macro, Quant, Risk, and other
+intelligence engines, plus a Challenger engine that critiques reasoning and a
+human-only Decision layer. **None of that is implemented yet.** This README
+describes only what currently exists.
 
-CapitalOS allows a user to:
+## Current Scope
 
-1. Create an Entity (a company, person, sector, country, or asset).
-2. Open a Research Case for that Entity.
-3. Add structured Claims representing reasoning about that Entity.
-4. View and update those Claims over time.
+### Milestone 1 - Core Reasoning Objects
+- **Entity** - a canonical subject (company, person, sector, country, asset,
+  or other), so claims don't repeatedly store subject names as free text.
+- **ResearchCase** - a container for reasoning about an entity, or about
+  something broader than a single entity.
+- **Claim** - the atomic unit of reasoning. Each claim has independent axes
+  rather than one collapsed type:
+  - `temporal_orientation`: historical / current / forecast
+  - `epistemic_role`: evidence / interpretation / assumption / risk / hypothesis
+  - `shape`: quantitative / qualitative
+  - `confidence_band` (nullable): low / medium / high - deliberately not a
+    percentage, to avoid false precision
+  - `lifecycle_status`: active / superseded / invalidated / expired
+  - `lens` (nullable): fundamental / macro / quant / strategic / risk / behavioural
+  - `origin` (required): user / ai_suggested / engine_generated / imported
 
-The long-term system is intended to eventually include additional
-intelligence layers (fundamental, macro, quant, risk, and challenger
-engines) and decision-tracking concepts (Decision, Outcome). **None of
-that is implemented yet.** This README describes only what currently
-exists in code.
+### Milestone 2 - Claim Relationships
+- **ClaimRelationship** - a directed link between two claims:
+  `relationship_type` is one of `supports`, `contradicts`, or `depends_on`.
+- This is a plain relational table, not a graph database. The "Reasoning
+  Graph" remains a computed view built from these rows, not a stored
+  structure.
+- A claim cannot relate to itself (`422`), and both claims referenced in a
+  relationship must already exist (`404` if not).
+- Relationships have no update endpoint by design - if a relationship is
+  wrong, delete it and create the correct one, rather than editing it in
+  place.
 
-## Milestone 1 Scope
-
-Implemented:
-
-- `Entity` - canonical subject records (company, person, sector, country,
-  asset, other)
-- `ResearchCase` - a container for structured reasoning, optionally tied
-  to an Entity
-- `Claim` - the atomic unit of reasoning, with independent axes:
-  `temporal_orientation`, `epistemic_role`, `shape`, `confidence_band`,
-  `lifecycle_status`, `lens`, and `origin`
-
-Not implemented yet (intentionally out of scope for Milestone 1):
-
+### Explicitly NOT implemented yet
 - WorldData, ModelRun, Decision, Outcome
-- Challenger engine / ChallengeOutput
-- Claim-to-Claim relationships or a Reasoning Graph as a stored primitive
+- The Challenger engine and ChallengeOutput
 - Authentication
-- Frontend## Project Setup
+- Frontend
+- Alembic migrations (schema is created via `Base.metadata.create_all()`)
 
-### Prerequisites
+## Tech Stack
+- **Backend:** FastAPI + SQLAlchemy (declarative models) + Pydantic v2
+- **Database:** PostgreSQL (Render-hosted). `DATABASE_URL` is fully
+  environment-driven - no SQLite-specific logic in the application, so it
+  would work against any Postgres instance.
+- **Testing:** pytest, using an isolated test database
+- **Deployment:** Render (Python 3 web service)
 
-- Python 3.10+
+## Project Setup
 
-### Install dependencies
+### 1. Clone and enter the project
+```cmd
+git clone https://github.com/Vineeth2002/capitalos.git
+cd capitalos\backend
+```
 
+### 2. Create and activate a virtual environment
 ```cmd
 python -m venv venv
 venv\Scripts\activate
+```
+
+### 3. Install dependencies
+```cmd
 pip install -r requirements.txt
 ```
 
-## Environment Variables
-
-Copy `.env.example` to `.env` and adjust as needed:
-
-```cmd
-copy .env.example .env
-```
-
-| Variable       | Description                                   | Default                        |
-|----------------|------------------------------------------------|---------------------------------|
-| `DATABASE_URL` | SQLAlchemy connection string. SQLite for local development; PostgreSQL-compatible for later environments. | `sqlite:///./capitalos.db` |
-
-## How to Run Locally
-
-```cmd
-uvicorn app.main:app --reload
-```
-
-The server starts at `http://127.0.0.1:8000`. Database tables are created
-automatically on startup via `Base.metadata.create_all()`.## API Documentation
-
-Interactive Swagger documentation is available at:
-
-http://127.0.0.1:8000/docs
-
-
-A basic health check is available at:
-
-http://127.0.0.1:8000/health
-
-
-## Running Tests
-
-```cmd
-pytest -v
-```
-
-Tests use an isolated SQLite database (`test.db`) and cover Entity
-creation, Research Case creation, Claim creation, Claim enum validation,
-and Claim-to-ResearchCase ownership.
+### 4. Configure environment variables
+Copy `.env.example` to `.env` and set `DATABASE_URL`:
