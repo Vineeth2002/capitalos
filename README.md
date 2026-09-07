@@ -80,31 +80,37 @@ only what currently exists.
 
 ## Tech Stack
 - **Backend:** FastAPI + SQLAlchemy (declarative models) + Pydantic v2
-- **Database:** PostgreSQL (Render-hosted). `DATABASE_URL` is fully
-  environment-driven - no SQLite-specific logic in the application, so it
-  would work against any Postgres instance.
+- **Database:** PostgreSQL (Render-hosted) is the deployed and supported
+  database. A local SQLite URL is accepted only as an optional local
+  development convenience - it is not a supported production path, and
+  the app has no SQLite-specific logic either way (`DATABASE_URL` is fully
+  environment-driven).
 - **LLM:** Google Gemini API via the `google-genai` SDK, isolated behind a
   single service module for future provider flexibility.
-- **Testing:** pytest, using an isolated test database. Challenger tests are
-  split into fast mocked tests (run by default) and a real-API safety check
-  (opt-in only, via `RUN_LIVE_LLM_TESTS=1`, to avoid burning free-tier quota).
+- **Testing:** pytest. The current suite contains 17 tests total: 16 run by
+  default using a mocked Challenger integration (fast, no API cost), and 1
+  live Gemini safety test that is opt-in only, to avoid consuming API quota
+  during normal development.
 - **Deployment:** Render (Python 3 web service)
 
 ## Project Setup
 
 ### 1. Clone and enter the project
+
 ```cmd
 git clone https://github.com/Vineeth2002/capitalos.git
 cd capitalos\backend
 ```
 
 ### 2. Create and activate a virtual environment
+
 ```cmd
 python -m venv venv
 venv\Scripts\activate
 ```
 
 ### 3. Install dependencies
+
 ```cmd
 pip install -r requirements.txt
 ```
@@ -116,12 +122,12 @@ LLM_PROVIDER=gemini
 LLM_MODEL=gemini-flash-latest
 LLM_API_KEY=<your Gemini API key>
 
-A local SQLite URL (`sqlite:///./capitalos.db`) also works for `DATABASE_URL`
-during quick local testing, since the app has no SQLite-specific logic
-either way. `LLM_API_KEY` is required for the Challenger endpoints to work;
-the rest of the API functions without it.
+
+`LLM_API_KEY` is required for the Challenger endpoints to work; the rest of
+the API functions without it.
 
 ### 5. Run the application
+
 ```cmd
 uvicorn app.main:app --reload
 ```
@@ -129,8 +135,8 @@ uvicorn app.main:app --reload
 Tables are created automatically on startup via `Base.metadata.create_all()`.
 
 ### 6. Access the API
-- Interactive docs: `http://127.0.0.1:8000/docs`
-- Health check: `http://127.0.0.1:8000/health`
+- Interactive docs: http://127.0.0.1:8000/docs
+- Health check: http://127.0.0.1:8000/health
 
 ## API Overview
 GET/POST /entities
@@ -150,11 +156,13 @@ GET /research-cases/{case_id}/challenges
 GET /health
 
 ## Running Tests
+
 ```cmd
 pytest -v
 ```
 
 To also run the live Gemini safety check (uses real API quota):
+
 ```cmd
 set RUN_LIVE_LLM_TESTS=1
 pytest -v
@@ -163,8 +171,9 @@ pytest -v
 ## Live Deployment
 - **URL:** https://capitalos-bmdl.onrender.com
 - `/health` and `/docs` are both publicly reachable.
-- **Known limitation:** the Render free-tier Postgres database has a fixed
-  expiry unless upgraded to a paid compute plan - revisit before that date.
+- **Operational note:** the current deployment uses Render-managed
+  PostgreSQL. Database plan, persistence, and operational limits should be
+  reviewed periodically rather than assumed permanent.
 - **Known limitation:** the Challenger endpoint currently has no rate
   limiting. Planned before any external or real-user testing, since it
   calls a metered external API.
