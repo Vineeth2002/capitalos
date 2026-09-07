@@ -132,7 +132,8 @@ the API functions without it.
 uvicorn app.main:app --reload
 ```
 
-Tables are created automatically on startup via `Base.metadata.create_all()`.
+Database tables are currently created automatically on application startup
+via `Base.metadata.create_all()`. Alembic migrations are not yet implemented.
 
 ### 6. Access the API
 - Interactive docs: http://127.0.0.1:8000/docs
