@@ -6,9 +6,12 @@ application itself — safe to edit freely, nothing imports this file.
 ## Start the local server
 
 ```cmd
-c:\capitalos\backend\venv\Scripts\activate.bat
-uvicorn app.main:app --reload
+cd C:\capitalos\backend
+C:\capitalos\backend\venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
+C:\capitalos\backend\venv\Scripts\python.exe -m pip install psycopg2-binary
+Only run it again if you recreate the virtual environment or get a missing psycopg2 error.
+
 
 Then open:
 - http://127.0.0.1:8000/docs (Swagger UI)
