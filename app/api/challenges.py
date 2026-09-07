@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.rate_limiter import enforce_challenge_rate_limit
 from app.db.session import get_db
 from app.models.research_case import ResearchCase
 from app.schemas.challenge_output import ChallengeOutputResponse
@@ -24,6 +26,7 @@ def _to_response(db: Session, challenge) -> ChallengeOutputResponse:
 @router.post(
     "/research-cases/{case_id}/challenge",
     response_model=list[ChallengeOutputResponse],
+    dependencies=[Depends(enforce_challenge_rate_limit)],
 )
 def create_challenges(case_id: int, db: Session = Depends(get_db)):
     case = db.get(ResearchCase, case_id)

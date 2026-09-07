@@ -1,4 +1,5 @@
 import os
+import os
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,6 +11,7 @@ os.environ["DATABASE_URL"] = "sqlite:///./test.db"
 from app.main import app  # noqa: E402
 from app.db.base import Base  # noqa: E402
 from app.db.session import get_db  # noqa: E402
+from app.core.rate_limiter import reset_rate_limiter  # noqa: E402
 
 TEST_DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
@@ -31,6 +33,12 @@ app.dependency_overrides[get_db] = override_get_db
 def reset_database():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    yield
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limits():
+    reset_rate_limiter()
     yield
 
 
