@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.rate_limiter import enforce_challenge_rate_limit
@@ -7,6 +6,7 @@ from app.db.session import get_db
 from app.models.research_case import ResearchCase
 from app.schemas.challenge_output import ChallengeOutputResponse
 from app.services import challenger_service
+from app.services.challenger_service import ChallengerUnavailableError
 
 router = APIRouter(tags=["challenges"])
 
@@ -33,7 +33,17 @@ def create_challenges(case_id: int, db: Session = Depends(get_db)):
     if not case:
         raise HTTPException(status_code=404, detail="Research case not found")
 
-    challenges = challenger_service.generate_challenges(db, case_id)
+    try:
+        challenges = challenger_service.generate_challenges(db, case_id)
+    except ChallengerUnavailableError:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "The Challenger's AI provider is temporarily unavailable. "
+                "Please try again in a few minutes."
+            ),
+        )
+
     return [_to_response(db, c) for c in challenges]
 
 

@@ -19,8 +19,12 @@ Then open:
 
 ## Run tests
 
+`pytest -v` alone may say "not recognized" (venv activation has been
+unreliable on this machine). Use the same direct-call pattern as
+uvicorn:
+
 ```cmd
-pytest -v
+C:\capitalos\backend\venv\Scripts\python.exe -m pytest -v
 ```
 
 Live Gemini safety test is skipped by default (avoids burning free-tier
@@ -28,7 +32,7 @@ quota). To run it deliberately:
 
 ```cmd
 set RUN_LIVE_LLM_TESTS=1
-pytest -v
+C:\capitalos\backend\venv\Scripts\python.exe -m pytest -v
 ```
 
 ## Creating/editing files (Windows terminal)
@@ -69,6 +73,11 @@ the latest commit:
 3. Watch the **Logs** tab until you see `Uvicorn running` and
    "Your service is live"
 
+Restarting the web service (Manual Deploy, same code) also resets the
+in-memory Challenger rate limiter to 0/5 — useful if you hit the limit
+yourself while testing. It does NOT touch the Postgres database; all
+data survives a web service restart.
+
 ## Verify a deploy actually works
 
 https://capitalos-bmdl.onrender.com/health
@@ -90,6 +99,23 @@ LLM_API_KEY=<your Gemini key>
 Render web service needs the same three `LLM_*` vars plus
 `DATABASE_URL` set under **Environment** in the dashboard (use the
 Postgres **Internal** URL there, not External).
+
+## Known quirks
+
+- **Swagger `case_id`/path-param fields auto-fill with the previous
+  response's `id`.** Before executing any request, manually check and
+  retype the path parameter (e.g. `case_id`) — don't trust it to have
+  stayed what you last typed.
+- **`/research-cases/{case_id}/challenge` is rate-limited to 5 requests
+  per IP per hour.** A request that fails (404, or even a Gemini `503`)
+  still counts against this limit. Restarting the web service resets
+  it to 0/5 without touching your data (see Deploying to Render above).
+- **Gemini `503` (high demand) after exhausted retries now returns a
+  clean `503`** to the caller with a "temporarily unavailable" message,
+  instead of a bare `500 Internal Server Error`.
+- **`venv\Scripts\activate.bat` may be empty/unreliable** on this
+  machine — if activation silently does nothing, call
+  `venv\Scripts\python.exe -m <tool>` directly instead (see above).
 
 ## Key URLs
 

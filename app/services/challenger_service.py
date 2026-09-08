@@ -12,6 +12,16 @@ from app.models.challenge_output import ChallengeOutput, ChallengeOutputClaim
 from app.schemas.challenge_output import ChallengeCategory
 
 
+class ChallengerUnavailableError(Exception):
+    # Raised when the configured LLM provider remains unavailable after all
+    # retry attempts are exhausted. This is deliberately generic - it carries
+    # no provider-specific type information, so callers (the API route
+    # layer) never need to know whether Gemini, another provider, or a mock
+    # produced the failure. That keeps the provider isolated inside this
+    # module, per the architecture's engine-contract boundary.
+    pass
+
+
 _client = genai.Client(api_key=settings.LLM_API_KEY)
 
 _VALID_CATEGORIES = set(c.value for c in ChallengeCategory)
@@ -98,7 +108,11 @@ def _call_llm(claims, relationships):
                 time.sleep(_RETRY_DELAY_SECONDS * attempt)
 
     if last_error is not None:
-        raise last_error
+        raise ChallengerUnavailableError(
+            "The Challenger's AI provider was unavailable after "
+            + str(_MAX_RETRIES)
+            + " attempts."
+        ) from last_error
 
     parsed = json.loads(response.text)
     raw_challenges = parsed.get("challenges", [])

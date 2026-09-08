@@ -128,3 +128,19 @@ def test_list_challenges_returns_previously_generated(client, monkeypatch):
 
     assert response.status_code == 200
     assert len(response.json()) >= 1
+
+from app.services.challenger_service import ChallengerUnavailableError
+
+def failing_call_llm(claims, relationships):
+    raise ChallengerUnavailableError("Simulated exhausted-retry failure")
+
+
+def test_generate_challenges_returns_503_when_provider_unavailable(client, monkeypatch):
+    monkeypatch.setattr(challenger_service, "_call_llm", failing_call_llm)
+
+    case_id = create_research_case(client).json()["id"]
+    create_claim(client, case_id)
+
+    response = client.post(f"/research-cases/{case_id}/challenge")
+    assert response.status_code == 503
+    assert "temporarily unavailable" in response.json()["detail"].lower()
