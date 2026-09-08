@@ -143,3 +143,30 @@ def test_reasoning_intake_missing_message_gets_default(client, monkeypatch):
     assert data["needs_more_reasoning"] is True
     assert data["message"] is not None
     assert len(data["message"]) > 0
+
+from google.genai import errors as genai_errors
+
+
+def test_reasoning_intake_returns_503_on_quota_exhausted(client, monkeypatch):
+    def fake_client_error(text):
+        raise genai_errors.ClientError(
+            429,
+            {"error": {"message": "quota exceeded"}},
+            None,
+        )
+
+    # Patch _call_llm's underlying retry loop by patching the client call
+    # it wraps - simplest is to monkeypatch _call_llm's exception path via
+    # the real function, using a fake that raises ClientError like the
+    # actual SDK does.
+    monkeypatch.setattr(
+        reasoning_intake_service,
+        "_call_llm",
+        lambda text: (_ for _ in ()).throw(
+            IntakeUnavailableError("quota exceeded, simulated")
+        ),
+    )
+
+    response = client.post("/reasoning-intake", json={"text": "Some reasoning"})
+    assert response.status_code == 503
+

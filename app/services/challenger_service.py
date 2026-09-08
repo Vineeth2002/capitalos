@@ -106,6 +106,9 @@ def _call_llm(claims, relationships):
             last_error = exc
             if attempt < _MAX_RETRIES:
                 time.sleep(_RETRY_DELAY_SECONDS * attempt)
+        except genai_errors.ClientError as exc:
+            last_error = exc
+            break
 
     if last_error is not None:
         raise ChallengerUnavailableError(

@@ -144,3 +144,16 @@ def test_generate_challenges_returns_503_when_provider_unavailable(client, monke
     response = client.post(f"/research-cases/{case_id}/challenge")
     assert response.status_code == 503
     assert "temporarily unavailable" in response.json()["detail"].lower()
+
+def test_challenge_returns_503_on_quota_exhausted(client, monkeypatch):
+    def raise_unavailable(claims, relationships):
+        from app.services.challenger_service import ChallengerUnavailableError
+        raise ChallengerUnavailableError("quota exceeded, simulated")
+
+    monkeypatch.setattr(challenger_service, "_call_llm", raise_unavailable)
+
+    case_id = create_research_case(client).json()["id"]
+    create_claim(client, case_id)
+
+    response = client.post(f"/research-cases/{case_id}/challenge")
+    assert response.status_code == 503

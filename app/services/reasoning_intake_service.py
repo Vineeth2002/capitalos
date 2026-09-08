@@ -99,6 +99,12 @@ def _call_llm(text):
             last_error = exc
             if attempt < _MAX_RETRIES:
                 time.sleep(_RETRY_DELAY_SECONDS * attempt)
+        except genai_errors.ClientError as exc:
+            # Client errors (e.g. 429 quota exceeded) will not be fixed by
+            # retrying within seconds, unlike transient ServerErrors. Fail
+            # immediately rather than wasting retry attempts.
+            last_error = exc
+            break
 
     if last_error is not None:
         raise IntakeUnavailableError(
