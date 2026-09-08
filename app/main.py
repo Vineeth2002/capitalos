@@ -16,6 +16,7 @@ from app.api import (
     claims,
     claim_relationships,
     challenges,
+    reasoning_intake,
 )
 
 app = FastAPI(title=settings.APP_NAME)
@@ -27,6 +28,7 @@ app.include_router(research_cases.router)
 app.include_router(claims.router)
 app.include_router(claim_relationships.router)
 app.include_router(challenges.router)
+app.include_router(reasoning_intake.router)
 
 
 @app.get("/health")

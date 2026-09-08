@@ -12,9 +12,9 @@ _request_log = defaultdict(list)
 
 
 def reset_rate_limiter():
-    # Test-only helper. Clears all in-memory rate limit state so automated
-    # tests don't interfere with each other. Never called from any
-    # production code path or endpoint.
+    # Test-only helper. Clears all in-memory rate limit state (across every
+    # scope) so automated tests don't interfere with each other. Never
+    # called from any production code path or endpoint.
     with _lock:
         _request_log.clear()
 
@@ -25,17 +25,18 @@ def _get_client_ip(request: Request) -> str:
     return "unknown"
 
 
-def enforce_challenge_rate_limit(request: Request):
-    # Simple in-memory sliding-window limiter, scoped to a single process.
-    # Appropriate for the current single-instance Render deployment. Not
-    # designed to survive multiple server instances or restarts - if the
-    # app ever scales beyond one instance, this needs to move to a shared
-    # store, but that is out of scope for the current validation stage.
+def _enforce(scope: str, request: Request):
+    # Simple in-memory sliding-window limiter, scoped to a single process
+    # AND to a named endpoint (scope), so /challenge and /reasoning-intake
+    # each get their own independent 5-per-hour budget. Appropriate for the
+    # current single-instance Render deployment - not designed to survive
+    # multiple server instances or restarts.
     ip = _get_client_ip(request)
+    key = scope + ":" + ip
     now = time.time()
 
     with _lock:
-        timestamps = _request_log[ip]
+        timestamps = _request_log[key]
         cutoff = now - _WINDOW_SECONDS
         timestamps[:] = [t for t in timestamps if t > cutoff]
 
@@ -45,9 +46,17 @@ def enforce_challenge_rate_limit(request: Request):
                 detail=(
                     "Rate limit exceeded: maximum "
                     + str(_MAX_REQUESTS)
-                    + " challenge requests per IP per hour. "
+                    + " requests per IP per hour for this endpoint. "
                     "Please try again later."
                 ),
             )
 
         timestamps.append(now)
+
+
+def enforce_challenge_rate_limit(request: Request):
+    _enforce("challenge", request)
+
+
+def enforce_intake_rate_limit(request: Request):
+    _enforce("reasoning_intake", request)
