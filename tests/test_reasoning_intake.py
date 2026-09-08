@@ -169,4 +169,3 @@ def test_reasoning_intake_returns_503_on_quota_exhausted(client, monkeypatch):
 
     response = client.post("/reasoning-intake", json={"text": "Some reasoning"})
     assert response.status_code == 503
-
