@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel
 
 
@@ -18,6 +20,8 @@ class InferredCandidate(BaseModel):
 
 
 class ReasoningIntakeResponse(BaseModel):
-    objective_context: str
+    objective_context: Optional[str]
     draft_claims: list[DraftClaim]
     inferred_candidates: list[InferredCandidate]
+    needs_more_reasoning: bool
+    message: Optional[str]

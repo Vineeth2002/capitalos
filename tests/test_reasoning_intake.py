@@ -19,6 +19,8 @@ def fake_call_llm(text):
                 "reason": "Multiple exam paths were mentioned without a clear single priority",
             }
         ],
+        "needs_more_reasoning": False,
+        "message": None,
     }
 
 
@@ -40,6 +42,18 @@ def fake_call_llm_with_invalid_entries(text):
             },
         ],
         "inferred_candidates": [],
+        "needs_more_reasoning": False,
+        "message": None,
+    }
+
+
+def fake_call_llm_needs_more_reasoning(text):
+    return {
+        "objective_context": None,
+        "draft_claims": [],
+        "inferred_candidates": [],
+        "needs_more_reasoning": True,
+        "message": "I couldn't identify enough of your own reasoning to extract grounded claims.",
     }
 
 
@@ -56,6 +70,7 @@ def test_reasoning_intake_returns_structured_draft(client, monkeypatch):
     )
     assert response.status_code == 200
     data = response.json()
+    assert data["needs_more_reasoning"] is False
     assert data["objective_context"] == "Wants a stable, respected long-term career."
     assert len(data["draft_claims"]) == 1
     assert data["draft_claims"][0]["epistemic_role"] == "assumption"
@@ -86,3 +101,45 @@ def test_reasoning_intake_returns_503_when_provider_unavailable(client, monkeypa
     response = client.post("/reasoning-intake", json={"text": "Some reasoning"})
     assert response.status_code == 503
     assert "temporarily unavailable" in response.json()["detail"].lower()
+
+
+def test_reasoning_intake_flags_placeholder_input_as_needing_more_reasoning(
+    client, monkeypatch
+):
+    monkeypatch.setattr(
+        reasoning_intake_service, "_call_llm", fake_call_llm_needs_more_reasoning
+    )
+
+    response = client.post(
+        "/reasoning-intake",
+        json={"text": "your actual reasoning about X, in your own words"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["needs_more_reasoning"] is True
+    assert data["objective_context"] is None
+    assert data["draft_claims"] == []
+    assert data["inferred_candidates"] == []
+    assert data["message"] is not None
+
+
+def test_reasoning_intake_missing_message_gets_default(client, monkeypatch):
+    def fake_needs_more_no_message(text):
+        return {
+            "objective_context": None,
+            "draft_claims": [],
+            "inferred_candidates": [],
+            "needs_more_reasoning": True,
+            "message": None,
+        }
+
+    monkeypatch.setattr(
+        reasoning_intake_service, "_call_llm", fake_needs_more_no_message
+    )
+
+    response = client.post("/reasoning-intake", json={"text": "hi"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["needs_more_reasoning"] is True
+    assert data["message"] is not None
+    assert len(data["message"]) > 0
