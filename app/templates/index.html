@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CapitalOS</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="container">
+  <h1>CapitalOS</h1>
+  <p class="subtitle">Structure your reasoning. See it challenged.</p>
+
+  <section id="step-input" class="step">
+    <h2>1. Describe your decision</h2>
+    <label>Title</label>
+    <input type="text" id="title" placeholder="e.g. RBI Grade B vs SSC CGL">
+    <label>Your reasoning</label>
+    <textarea id="reasoning-text" rows="10" placeholder="Describe the decision you're thinking about. Include your options, assumptions, doubts, contradictions and uncertainty."></textarea>
+    <button id="btn-analyze">Analyze My Reasoning</button>
+    <div id="analyze-error" class="error"></div>
+  </section>
+
+  <section id="step-review" class="step hidden">
+    <h2>2. Review what CapitalOS understood</h2>
+    <div id="needs-more" class="notice hidden"></div>
+
+    <div id="review-content" class="hidden">
+      <h3>Objective / Context</h3>
+      <textarea id="objective-context" rows="2"></textarea>
+
+      <h3>Your claims</h3>
+      <div id="draft-claims"></div>
+
+      <h3>AI-inferred candidates (not yet your claims)</h3>
+      <div id="inferred-candidates"></div>
+
+      <button id="btn-confirm">Confirm Reasoning</button>
+      <div id="confirm-error" class="error"></div>
+    </div>
+  </section>
+
+  <section id="step-challenge" class="step hidden">
+    <h2>3. Challenge your reasoning</h2>
+    <button id="btn-challenge">Challenge My Reasoning</button>
+    <div id="challenge-error" class="error"></div>
+    <div id="challenge-results"></div>
+  </section>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

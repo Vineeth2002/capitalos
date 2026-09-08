@@ -1,8 +1,8 @@
 fastapi
-fastapi
 uvicorn[standard]
 sqlalchemy
 pydantic-settings
 python-dotenv
 psycopg2-binary
 google-genai
+jinja2

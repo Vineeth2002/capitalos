@@ -83,3 +83,4 @@ def test_confirm_rolls_back_on_invalid_entity_reference(client):
 
     titles = [rc["title"] for rc in after]
     assert "Should not be persisted" not in titles
+    
