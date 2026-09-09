@@ -13,7 +13,6 @@ class IntakeUnavailableError(Exception):
     # as ChallengerUnavailableError in challenger_service.py.
     pass
 
-
 _client = genai.Client(api_key=settings.LLM_API_KEY)
 
 _MAX_RETRIES = 3
@@ -107,6 +106,12 @@ def _call_llm(text):
             break
 
     if last_error is not None:
+        print(
+            "IntakeUnavailableError root cause: "
+            + type(last_error).__name__
+            + ": "
+            + str(last_error)
+        )
         raise IntakeUnavailableError(
             "The reasoning intake AI provider was unavailable after "
             + str(_MAX_RETRIES)
