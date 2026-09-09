@@ -28,3 +28,31 @@ def update_claim(db: Session, claim: Claim, claim_in: ClaimUpdate) -> Claim:
     db.commit()
     db.refresh(claim)
     return claim
+
+from app.models.claim_relationship import ClaimRelationship
+from app.models.challenge_output import ChallengeOutputClaim
+
+
+def claim_has_dependencies(db: Session, claim_id: int) -> bool:
+    relationship_exists = (
+        db.query(ClaimRelationship)
+        .filter(
+            (ClaimRelationship.from_claim_id == claim_id)
+            | (ClaimRelationship.to_claim_id == claim_id)
+        )
+        .first()
+    )
+    if relationship_exists:
+        return True
+
+    challenge_link_exists = (
+        db.query(ChallengeOutputClaim)
+        .filter(ChallengeOutputClaim.claim_id == claim_id)
+        .first()
+    )
+    return challenge_link_exists is not None
+
+
+def delete_claim(db: Session, claim: Claim) -> None:
+    db.delete(claim)
+    db.commit()

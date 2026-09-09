@@ -101,3 +101,42 @@ def test_claim_belongs_to_research_case(client):
     claims_b = response_b.json()
     assert len(claims_b) == 1
     assert claims_b[0]["research_case_id"] == case_b["id"]
+
+def test_delete_claim_succeeds_when_no_dependencies(client):
+    case = create_research_case(client).json()
+    claim_resp = client.post(
+        f"/research-cases/{case['id']}/claims", json=valid_claim_payload()
+    )
+    claim_id = claim_resp.json()["id"]
+
+    response = client.delete(f"/claims/{claim_id}")
+    assert response.status_code == 204
+
+    verify = client.get(f"/claims/{claim_id}")
+    assert verify.status_code == 404
+
+
+def test_delete_nonexistent_claim_returns_404(client):
+    response = client.delete("/claims/999999")
+    assert response.status_code == 404
+
+
+def test_delete_claim_blocked_when_referenced_by_relationship(client):
+    case = create_research_case(client).json()
+    claim_a = client.post(
+        f"/research-cases/{case['id']}/claims", json=valid_claim_payload()
+    ).json()
+    claim_b = client.post(
+        f"/research-cases/{case['id']}/claims", json=valid_claim_payload()
+    ).json()
+
+    client.post(
+        f"/claims/{claim_a['id']}/relationships",
+        json={"to_claim_id": claim_b["id"], "relationship_type": "supports"},
+    )
+
+    response = client.delete(f"/claims/{claim_a['id']}")
+    assert response.status_code == 409
+
+    verify = client.get(f"/claims/{claim_a['id']}")
+    assert verify.status_code == 200

@@ -49,3 +49,23 @@ def update_claim(claim_id: int, claim_in: ClaimUpdate, db: Session = Depends(get
         if not entity:
             raise HTTPException(status_code=404, detail="Entity not found")
     return claim_service.update_claim(db, claim, claim_in)
+
+
+@router.delete("/claims/{claim_id}", status_code=204)
+def delete_claim(claim_id: int, db: Session = Depends(get_db)):
+    claim = claim_service.get_claim(db, claim_id)
+    if not claim:
+        raise HTTPException(status_code=404, detail="Claim not found")
+
+    if claim_service.claim_has_dependencies(db, claim_id):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "This claim cannot be deleted because it is referenced by "
+                "an existing relationship or challenge. Historical "
+                "challenges must remain intact."
+            ),
+        )
+
+    claim_service.delete_claim(db, claim)
+    return None
