@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CapitalOS — Workspace</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="container" data-case-id="{{ case_id }}">
+  <h1>CapitalOS</h1>
+  <p class="subtitle"><a href="/cases">← All Research Cases</a></p>
+
+  <section class="step">
+    <h2 id="ws-title">Loading...</h2>
+    <p id="ws-description"></p>
+  </section>
+
+  <section class="step">
+    <h2>Claims</h2>
+    <div id="ws-claims"></div>
+  </section>
+
+  <section class="step">
+    <h2>Challenges</h2>
+    <button id="btn-challenge">Challenge My Reasoning</button>
+    <div id="challenge-error" class="error"></div>
+    <div id="ws-challenges"></div>
+  </section>
+</div>
+<script src="/static/workspace.js"></script>
+</body>
+</html>

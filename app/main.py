@@ -42,6 +42,18 @@ def index(request: Request):
     return templates.TemplateResponse(request, "index.html", {})
 
 
+@app.get("/cases", response_class=HTMLResponse)
+def cases_list(request: Request):
+    return templates.TemplateResponse(request, "cases.html", {})
+
+
+@app.get("/cases/{case_id}", response_class=HTMLResponse)
+def case_workspace(request: Request, case_id: int):
+    return templates.TemplateResponse(
+        request, "workspace.html", {"case_id": case_id}
+    )
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
