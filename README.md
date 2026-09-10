@@ -1,13 +1,16 @@
 # CapitalOS
 
-CapitalOS is a structured reasoning and decision intelligence system. It helps
-turn investment research into explicit, structured claims rather than
-unstructured notes - so reasoning can be tracked, related, challenged, and
-revisited over time.
+CapitalOS is a structured reasoning and decision intelligence system. A
+person describes a real decision they're facing, in their own messy words;
+the system extracts that reasoning into explicit, structured Claims rather
+than free text; an AI "Challenger" then critiques the structure of that
+reasoning (missing evidence, unstated assumptions, contradictions,
+alternative explanations, invalidation conditions) - without ever giving
+advice or a recommendation.
 
 The long-term vision includes Fundamental, Macro, Quant, Risk, and other
-intelligence engines, plus a human-only Decision layer. This README describes
-only what currently exists.
+intelligence engines, plus a human-only Decision layer. This README
+describes only what currently exists.
 
 ## Current Scope
 
@@ -63,34 +66,94 @@ only what currently exists.
   on whether an investment is good or bad. It only critiques the structure
   and completeness of the reasoning it's given.
 - Transient Gemini server errors (`503`) are retried automatically (up to 3
-  attempts with backoff) before failing the request.
+  attempts with backoff) before failing the request. Gemini quota errors
+  (`429`, both per-minute and daily) are also caught and surfaced as a clean
+  `503 Service Unavailable` to the caller, never as a raw provider error.
 - `POST /research-cases/{case_id}/challenge` generates new challenges for a
   case (loading its claims and relationships as context); challenges
   accumulate rather than replace previous ones. `GET
   /research-cases/{case_id}/challenges` retrieves all challenges generated
-  for a case so far.
+  for a case so far. Rate-limited to 5 requests per IP per hour.
 
-### Explicitly NOT implemented yet
-- WorldData, ModelRun, Decision, Outcome
-- Authentication
-- Frontend
+### Milestone 4 - Reasoning Intake
+- `POST /reasoning-intake` accepts free-text natural-language reasoning and
+  uses Gemini to extract it into three parts: `objective_context` (the
+  person's goal/preference, not a belief about the world),
+  `draft_claims` (atomic beliefs directly stated), and
+  `inferred_candidates` (things the AI suspects but the person did not
+  directly state - kept clearly separate and requiring explicit
+  confirmation before becoming a real Claim).
+- **Nothing is saved by this endpoint.** It is a pure draft/preview step.
+- A strict grounding rule prevents the model from inventing plausible
+  beliefs when given placeholder, instructional, or otherwise
+  insufficiently substantive input; in that case the response sets
+  `needs_more_reasoning: true` with an empty extraction and a message
+  asking for more detail, rather than fabricating claims from stray
+  keywords.
+- Rate-limited to 5 requests per IP per hour, independently from the
+  Challenger's own rate limit.
+
+### Milestone 5 - Reasoning Intake Confirm
+- `POST /reasoning-intake/confirm` takes a title, description, and a list
+  of confirmed claims (each with an explicit `origin`, so promoted
+  `inferred_candidates` are correctly marked `ai_suggested`) and creates one
+  `ResearchCase` and all its `Claim`s **atomically** in a single database
+  transaction. If any claim fails, the entire request rolls back - no
+  partially-created ResearchCase or claims are left behind.
+- This closes the gap between "here are your draft claims" and "here is
+  your saved, reviewable case" without requiring one manual API call per
+  claim.
+
+### Phases 6-9 - Human-facing Interface
+The product is not Swagger-only. A minimal web UI is served directly by the
+FastAPI app (Jinja2 templates + vanilla JS/CSS, no separate frontend
+framework or deployment):
+
+- **`/`** - the main reasoning workflow: describe a decision in plain text,
+  see it extracted into editable claim/candidate cards (no raw JSON),
+  confirm, then run the Challenger and see readable challenge cards.
+- **`/cases`** - lists every existing Research Case.
+- **`/cases/{id}`** - a persistent workspace for one Research Case, showing
+  its title, description, all claims, all existing relationships, and its
+  full Challenger history. From the workspace a user can:
+  - **Edit** an existing claim's statement or metadata (`PATCH
+    /claims/{id}`), or **delete** it (`DELETE /claims/{id}`) - deletion is
+    blocked with `409 Conflict` if the claim is referenced by any
+    relationship or any challenge, since the schema has no cascade and
+    historical challenges must remain intact.
+  - **Add** a new claim directly to the case (`POST
+    /research-cases/{case_id}/claims`).
+  - **View and create relationships** between the case's claims (`GET`/
+    `POST /claims/{claim_id}/relationships`), aggregated client-side across
+    all claims in the case since there is no single "all relationships for
+    a case" backend endpoint.
+  - **Re-run the Challenger** at any point after editing, so reasoning can
+    evolve iteratively rather than being a one-shot pipeline.
+
+### Explicitly NOT implemented
+- WorldData, ModelRun, Decision, Outcome layers
+- Authentication, user accounts, collaboration
 - Alembic migrations (schema is created via `Base.metadata.create_all()`)
-- Rate limiting on the Challenger endpoint (planned before any external/
-  real-user testing, since it calls a metered external API)
+- Relationship editing (only create/view; no update/delete UI for
+  relationships themselves)
+- Analytics, dashboards, relationship graph visualization
 
 ## Tech Stack
 - **Backend:** FastAPI + SQLAlchemy (declarative models) + Pydantic v2
+- **Frontend:** Jinja2 templates + vanilla JavaScript/CSS, served directly
+  by the FastAPI app under `app/templates/` and `app/static/`. No separate
+  frontend build, framework, or deployment.
 - **Database:** PostgreSQL (Render-hosted) is the deployed and supported
   database. A local SQLite URL is accepted only as an optional local
   development convenience - it is not a supported production path, and
   the app has no SQLite-specific logic either way (`DATABASE_URL` is fully
   environment-driven).
-- **LLM:** Google Gemini API via the `google-genai` SDK, isolated behind a
-  single service module for future provider flexibility.
-- **Testing:** pytest. The current suite contains 17 tests total: 16 run by
-  default using a mocked Challenger integration (fast, no API cost), and 1
-  live Gemini safety test that is opt-in only, to avoid consuming API quota
-  during normal development.
+- **LLM:** Google Gemini API via the `google-genai` SDK, isolated behind
+  dedicated service modules (`challenger_service.py`,
+  `reasoning_intake_service.py`) for future provider flexibility.
+- **Testing:** pytest. The suite is fully mocked for the LLM by default
+  (fast, no API cost); one live Gemini safety test is opt-in only, to avoid
+  consuming quota during normal development.
 - **Deployment:** Render (Python 3 web service)
 
 ## Project Setup
@@ -109,6 +172,10 @@ python -m venv venv
 venv\Scripts\activate
 ```
 
+If activation doesn't work (no `(venv)` prefix appears, tools say "not
+recognized"), call tools directly instead:
+`venv\Scripts\python.exe -m <tool>` (see DEV_NOTES.md).
+
 ### 3. Install dependencies
 
 ```cmd
@@ -123,8 +190,8 @@ LLM_MODEL=gemini-flash-latest
 LLM_API_KEY=<your Gemini API key>
 
 
-`LLM_API_KEY` is required for the Challenger endpoints to work; the rest of
-the API functions without it.
+`LLM_API_KEY` is required for the Challenger and Reasoning Intake endpoints
+to work; the rest of the API functions without it.
 
 ### 5. Run the application
 
@@ -133,10 +200,13 @@ uvicorn app.main:app --reload
 ```
 
 Database tables are currently created automatically on application startup
-via `Base.metadata.create_all()`. Alembic migrations are not yet implemented.
+via `Base.metadata.create_all()`. Alembic migrations are not yet
+implemented.
 
-### 6. Access the API
-- Interactive docs: http://127.0.0.1:8000/docs
+### 6. Access the application
+- Web UI: http://127.0.0.1:8000/
+- Research Case list: http://127.0.0.1:8000/cases
+- Interactive API docs: http://127.0.0.1:8000/docs
 - Health check: http://127.0.0.1:8000/health
 
 ## API Overview
@@ -148,13 +218,21 @@ GET/PATCH /research-cases/{case_id}
 
 POST/GET /research-cases/{case_id}/claims
 GET/PATCH /claims/{claim_id}
+DELETE /claims/{claim_id}
 
 POST/GET /claims/{claim_id}/relationships
 
 POST /research-cases/{case_id}/challenge
 GET /research-cases/{case_id}/challenges
 
+POST /reasoning-intake
+POST /reasoning-intake/confirm
+
+GET / (web UI)
+GET /cases (web UI)
+GET /cases/{id} (web UI)
 GET /health
+
 
 ## Running Tests
 
@@ -171,10 +249,17 @@ pytest -v
 
 ## Live Deployment
 - **URL:** https://capitalos-bmdl.onrender.com
-- `/health` and `/docs` are both publicly reachable.
+- `/`, `/cases`, `/docs`, and `/health` are all publicly reachable.
 - **Operational note:** the current deployment uses Render-managed
   PostgreSQL. Database plan, persistence, and operational limits should be
   reviewed periodically rather than assumed permanent.
-- **Known limitation:** the Challenger endpoint currently has no rate
-  limiting. Planned before any external or real-user testing, since it
-  calls a metered external API.
+- **Known limitation:** Google's Gemini free tier caps requests at 5 per
+  minute and 20 per day, project-wide. The daily quota resets at midnight
+  Pacific Time. Both the Challenger and Reasoning Intake endpoints are
+  affected; exceeding either limit surfaces as a clean `503 Service
+  Unavailable`, not an application error.
+- **Known limitation:** after some deploys, Render's dashboard has shown a
+  commit as "live" before the running process actually served the new code.
+  If a deploy appears not to have taken effect, verify with `curl` (which
+  bypasses browser and CDN caching) rather than trusting the dashboard
+  status alone, and try an explicit "Deploy latest commit" again.
