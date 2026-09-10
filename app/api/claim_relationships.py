@@ -11,7 +11,6 @@ from app.services import claim_relationship_service
 
 router = APIRouter(tags=["claim-relationships"])
 
-
 @router.post(
     "/claims/{claim_id}/relationships", response_model=ClaimRelationshipResponse
 )

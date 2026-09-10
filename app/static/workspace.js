@@ -4,6 +4,8 @@ const TEMPORAL_OPTIONS = ["historical", "current", "forecast"];
 const EPISTEMIC_OPTIONS = ["evidence", "interpretation", "assumption", "risk", "hypothesis"];
 const SHAPE_OPTIONS = ["quantitative", "qualitative"];
 
+let currentClaims = [];
+
 function selectHtml(name, options, selected) {
   return "<select data-field=\"" + name + "\">" + options.map(function (o) {
     return "<option value=\"" + o + "\"" + (o === selected ? " selected" : "") + ">" + o + "</option>";
@@ -37,7 +39,10 @@ async function loadWorkspace() {
 async function refreshClaims() {
   const claimsResponse = await fetch("/research-cases/" + caseId + "/claims");
   const claims = await claimsResponse.json();
+  currentClaims = claims;
   renderClaims(claims);
+  await refreshRelationships();
+  populateRelationshipDropdowns();
 }
 
 function renderClaims(claims) {
@@ -222,6 +227,92 @@ function addBlankClaimCard(container) {
     div.remove();
   });
 }
+
+function claimLabel(claimId) {
+  const claim = currentClaims.find(function (c) { return c.id === claimId; });
+  if (!claim) {
+    return "Claim " + claimId;
+  }
+  const short = claim.statement.length > 50
+    ? claim.statement.slice(0, 50) + "..."
+    : claim.statement;
+  return "#" + claimId + ": " + short;
+}
+
+async function refreshRelationships() {
+  const container = document.getElementById("ws-relationships");
+  container.innerHTML = "Loading...";
+
+  const allRelationships = [];
+  for (const claim of currentClaims) {
+    const response = await fetch("/claims/" + claim.id + "/relationships");
+    if (response.ok) {
+      const rels = await response.json();
+      rels.forEach(function (r) { allRelationships.push(r); });
+    }
+  }
+
+  if (allRelationships.length === 0) {
+    container.innerHTML = "<p>No relationships yet.</p>";
+    return;
+  }
+
+  container.innerHTML = "";
+  allRelationships.forEach(function (rel) {
+    const div = document.createElement("div");
+    div.className = "claim-card";
+    div.innerHTML =
+      "<div>" + claimLabel(rel.from_claim_id) + "</div>" +
+      "<div class=\"reason\"><strong>" + rel.relationship_type + "</strong></div>" +
+      "<div>" + claimLabel(rel.to_claim_id) + "</div>";
+    container.appendChild(div);
+  });
+}
+
+function populateRelationshipDropdowns() {
+  const fromSelect = document.getElementById("rel-from");
+  const toSelect = document.getElementById("rel-to");
+
+  const optionsHtml = currentClaims.map(function (c) {
+    return "<option value=\"" + c.id + "\">" + claimLabel(c.id) + "</option>";
+  }).join("");
+
+  fromSelect.innerHTML = optionsHtml;
+  toSelect.innerHTML = optionsHtml;
+
+  if (currentClaims.length > 1) {
+    toSelect.selectedIndex = 1;
+  }
+}
+
+document.getElementById("btn-add-relationship").addEventListener("click", async function () {
+  const errorEl = document.getElementById("relationship-error");
+  errorEl.textContent = "";
+
+  const fromId = parseInt(document.getElementById("rel-from").value, 10);
+  const toId = parseInt(document.getElementById("rel-to").value, 10);
+  const relType = document.getElementById("rel-type").value;
+
+  if (!fromId || !toId) {
+    errorEl.textContent = "You need at least two claims to create a relationship.";
+    return;
+  }
+
+  const response = await fetch("/claims/" + fromId + "/relationships", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ to_claim_id: toId, relationship_type: relType })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    errorEl.textContent = data.detail || "Could not create relationship.";
+    return;
+  }
+
+  await refreshRelationships();
+});
 
 function renderChallenges(challenges) {
   const container = document.getElementById("ws-challenges");

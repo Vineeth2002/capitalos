@@ -20,6 +20,23 @@
     <div id="ws-claims"></div>
   </section>
 
+    <section class="step">
+    <h2>Relationships</h2>
+    <div id="ws-relationships"></div>
+    <h3>Add a relationship</h3>
+    <div class="fields">
+      <select id="rel-from"></select>
+      <select id="rel-type">
+        <option value="supports">supports</option>
+        <option value="contradicts">contradicts</option>
+        <option value="depends_on">depends_on</option>
+      </select>
+      <select id="rel-to"></select>
+    </div>
+    <button id="btn-add-relationship">Create Relationship</button>
+    <div id="relationship-error" class="error"></div>
+  </section>
+
   <section class="step">
     <h2>Challenges</h2>
     <button id="btn-challenge">Challenge My Reasoning</button>
