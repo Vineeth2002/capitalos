@@ -33,13 +33,22 @@ function renderDraftClaims() {
     el.addEventListener("change", function () {
       const idx = parseInt(el.getAttribute("data-index"), 10);
       const field = el.getAttribute("data-field");
+      const before = claims[idx][field];
       claims[idx][field] = el.value;
+      logResearchEvent("CLAIM_EDITED", {
+        claim_index: idx,
+        field: field,
+        before: before,
+        after: el.value
+      });
     });
   });
   container.querySelectorAll("[data-action='remove']").forEach(function (el) {
     el.addEventListener("click", function () {
       const idx = parseInt(el.getAttribute("data-index"), 10);
+      const removed = claims[idx];
       claims.splice(idx, 1);
+      logResearchEvent("CLAIM_REMOVED_LOCALLY", { claim: removed });
       renderDraftClaims();
     });
   });
@@ -76,6 +85,7 @@ function renderCandidates(candidates) {
         shape: "qualitative",
         origin: "ai_suggested"
       });
+      logResearchEvent("CANDIDATE_PROMOTED", { candidate: candidate });
       candidates.splice(idx, 1);
       renderDraftClaims();
       renderCandidates(candidates);
@@ -84,6 +94,8 @@ function renderCandidates(candidates) {
   container.querySelectorAll("[data-action='reject']").forEach(function (el) {
     el.addEventListener("click", function () {
       const idx = parseInt(el.getAttribute("data-index"), 10);
+      const candidate = candidates[idx];
+      logResearchEvent("CANDIDATE_REJECTED", { candidate: candidate });
       candidates.splice(idx, 1);
       renderCandidates(candidates);
     });
@@ -100,6 +112,8 @@ document.getElementById("btn-analyze").addEventListener("click", async function 
     return;
   }
 
+  logResearchEvent("REASONING_SUBMITTED", { text: text });
+
   this.disabled = true;
   this.textContent = "Analyzing...";
 
@@ -115,6 +129,8 @@ document.getElementById("btn-analyze").addEventListener("click", async function 
       errorEl.textContent = data.detail || "Something went wrong.";
       return;
     }
+
+    logResearchEvent("INTAKE_COMPLETED", { response: data });
 
     document.getElementById("step-review").classList.remove("hidden");
 
@@ -162,46 +178,55 @@ document.getElementById("btn-confirm").addEventListener("click", async function 
   const title = document.getElementById("title").value.trim() || "Untitled reasoning case";
   const description = document.getElementById("objective-context").value;
 
-  this.disabled = true;
-  this.textContent = "Confirming...";
+  const button = this;
+  button.disabled = true;
+  button.textContent = "Confirming...";
+
+  const payload = {
+    entity_id: null,
+    title: title,
+    description: description,
+    claims: claims.map(function (c) {
+      return {
+        entity_id: null,
+        statement: c.statement,
+        temporal_orientation: c.temporal_orientation,
+        epistemic_role: c.epistemic_role,
+        shape: c.shape,
+        confidence_band: null,
+        lifecycle_status: "active",
+        lens: null,
+        origin: c.origin
+      };
+    })
+  };
 
   try {
     const response = await fetch("/reasoning-intake/confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        entity_id: null,
-        title: title,
-        description: description,
-        claims: claims.map(function (c) {
-          return {
-            entity_id: null,
-            statement: c.statement,
-            temporal_orientation: c.temporal_orientation,
-            epistemic_role: c.epistemic_role,
-            shape: c.shape,
-            confidence_band: null,
-            lifecycle_status: "active",
-            lens: null,
-            origin: c.origin
-          };
-        })
-      })
+      body: JSON.stringify(payload)
     });
     const data = await response.json();
 
     if (!response.ok) {
       errorEl.textContent = data.detail || "Something went wrong.";
+      button.disabled = false;
+      button.textContent = "Confirm Reasoning";
       return;
     }
 
+    logResearchEvent("CASE_CONFIRMED", { submitted: payload, result: data });
+
     researchCaseId = data.research_case.id;
     document.getElementById("step-challenge").classList.remove("hidden");
-    document.getElementById("btn-confirm").textContent = "Confirmed ✓";
+    button.textContent = "Confirmed \u2713";
+    // Button stays disabled after success - prevents duplicate ResearchCase
+    // creation from a second click on an already-confirmed submission.
   } catch (err) {
     errorEl.textContent = "Network error: " + err.message;
-  } finally {
-    this.disabled = false;
+    button.disabled = false;
+    button.textContent = "Confirm Reasoning";
   }
 });
 
@@ -210,6 +235,8 @@ document.getElementById("btn-challenge").addEventListener("click", async functio
   errorEl.textContent = "";
   this.disabled = true;
   this.textContent = "Challenging...";
+
+  logResearchEvent("CHALLENGE_REQUESTED", { research_case_id: researchCaseId });
 
   try {
     const response = await fetch("/research-cases/" + researchCaseId + "/challenge", {
@@ -221,6 +248,8 @@ document.getElementById("btn-challenge").addEventListener("click", async functio
       errorEl.textContent = data.detail || "Something went wrong.";
       return;
     }
+
+    logResearchEvent("CHALLENGE_COMPLETED", { challenges: data });
 
     const container = document.getElementById("challenge-results");
     container.innerHTML = "";

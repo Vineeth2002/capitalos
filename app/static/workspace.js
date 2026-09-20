@@ -116,7 +116,7 @@ function wireClaimCardEvents(container) {
         .then(function (r) { return r.json(); })
         .then(function (claim) {
           card.innerHTML = editModeHtml(claim);
-          wireEditActions(card, claimId);
+          wireEditActions(card, claimId, claim);
         });
     });
   });
@@ -132,6 +132,7 @@ function wireClaimCardEvents(container) {
 
       const response = await fetch("/claims/" + claimId, { method: "DELETE" });
       if (response.status === 204) {
+        logResearchEvent("CLAIM_DELETED", { claim_id: claimId });
         await refreshClaims();
       } else {
         const data = await response.json();
@@ -141,7 +142,7 @@ function wireClaimCardEvents(container) {
   });
 }
 
-function wireEditActions(card, claimId) {
+function wireEditActions(card, claimId, originalClaim) {
   card.querySelector("[data-action='save']").addEventListener("click", async function () {
     const statement = card.querySelector("[data-field='statement']").value;
     const temporal = card.querySelector("[data-field='temporal_orientation']").value;
@@ -160,6 +161,16 @@ function wireEditActions(card, claimId) {
     });
 
     if (response.ok) {
+      logResearchEvent("CLAIM_EDITED", {
+        claim_id: claimId,
+        before: originalClaim,
+        after: {
+          statement: statement,
+          temporal_orientation: temporal,
+          epistemic_role: epistemic,
+          shape: shape
+        }
+      });
       await refreshClaims();
     } else {
       const data = await response.json();
@@ -216,6 +227,8 @@ function addBlankClaimCard(container) {
     });
 
     if (response.ok) {
+      const created = await response.json();
+      logResearchEvent("CLAIM_ADDED_LOCALLY", { claim: created });
       await refreshClaims();
     } else {
       const data = await response.json();
@@ -311,6 +324,7 @@ document.getElementById("btn-add-relationship").addEventListener("click", async 
     return;
   }
 
+  logResearchEvent("RELATIONSHIP_CREATED", { from: fromId, to: toId, type: relType });
   await refreshRelationships();
 });
 
@@ -338,6 +352,8 @@ document.getElementById("btn-challenge").addEventListener("click", async functio
   this.disabled = true;
   this.textContent = "Challenging...";
 
+  logResearchEvent("CHALLENGE_REQUESTED", { research_case_id: caseId });
+
   try {
     const response = await fetch("/research-cases/" + caseId + "/challenge", {
       method: "POST"
@@ -349,6 +365,7 @@ document.getElementById("btn-challenge").addEventListener("click", async functio
       return;
     }
 
+    logResearchEvent("CHALLENGE_COMPLETED", { challenges: data });
     renderChallenges(data);
   } catch (err) {
     errorEl.textContent = "Network error: " + err.message;
