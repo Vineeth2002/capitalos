@@ -16,6 +16,7 @@ from app.models import (  # noqa: F401 - ensures tables are registered
     research_event,
     research_source,
     claim_source,
+    financial_fact,
 )
 from app.api import (
     entities,
@@ -26,6 +27,7 @@ from app.api import (
     reasoning_intake,
     research_events,
     research_sources,
+    financial_facts,
 )
 
 app = FastAPI(title=settings.APP_NAME)
@@ -43,6 +45,7 @@ app.include_router(challenges.router)
 app.include_router(reasoning_intake.router)
 app.include_router(research_events.router)
 app.include_router(research_sources.router)
+app.include_router(financial_facts.router)
 
 
 @app.get("/", response_class=HTMLResponse)
