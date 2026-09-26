@@ -3,6 +3,6 @@ uvicorn[standard]
 sqlalchemy
 pydantic-settings
 python-dotenv
-psycopg2-binary
+psycopg[binary]
 google-genai
 jinja2
