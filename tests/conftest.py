@@ -1,5 +1,4 @@
 import os
-import os
 
 import pytest
 from fastapi.testclient import TestClient
@@ -45,3 +44,17 @@ def reset_rate_limits():
 @pytest.fixture
 def client():
     return TestClient(app)
+
+
+@pytest.fixture
+def db_session():
+    # Direct DB session for tests that call service-layer functions
+    # (like the Phase 12 ingestion service) without going through an
+    # HTTP endpoint. Uses the same test database/engine as the client
+    # fixture, so data created via one is visible to the other within
+    # the same test.
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

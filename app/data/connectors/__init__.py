@@ -1,0 +1,6 @@
+from app.data.connectors.registry import register_connector
+from app.data.connectors.mock_provider_a import MockProviderAConnector
+from app.data.connectors.mock_provider_b import MockProviderBConnector
+
+register_connector(MockProviderAConnector.provider_name, MockProviderAConnector)
+register_connector(MockProviderBConnector.provider_name, MockProviderBConnector)
