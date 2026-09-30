@@ -21,6 +21,7 @@ from app.models import (  # noqa: F401 - ensures tables are registered
     ingestion_run,
     source_record,
     financial_fact,
+    event,
 )
 from app.api import (
     entities,
@@ -34,6 +35,7 @@ from app.api import (
     financial_facts,
     securities,
     listings,
+    events,
 )
 
 app = FastAPI(title=settings.APP_NAME)
@@ -54,6 +56,7 @@ app.include_router(research_sources.router)
 app.include_router(securities.router)
 app.include_router(listings.router)
 app.include_router(financial_facts.router)
+app.include_router(events.router)
 
 
 @app.get("/", response_class=HTMLResponse)
