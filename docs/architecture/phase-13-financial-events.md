@@ -60,11 +60,63 @@ future work, not a precondition for this table existing.
 
 
 
+\## Known boundary risk: event\_type / description as an unconstrained catch-all
+
+event\_type is a free string and description is unconstrained free text.
+
+Nothing in the model, schema, or service layer stops someone from creating
+
+an Event whose description actually holds a numeric observation that
+
+belongs in FinancialFact instead ("Q1 revenue was 10 crore" as an Event
+
+description, rather than a FinancialFact row). This is not a new risk
+
+introduced by Event - FinancialFact.fact\_type has the identical exposure,
+
+accepted and left unaddressed since Phase 11B/12 - but it is worth naming
+
+explicitly now that a second free-string-typed table exists, since the
+
+exposure compounds: a future reader deciding "is this a Fact or an Event"
+
+has no schema-level guidance either way.
+
+
+
+No validation is added in this phase. The fix, when it is built, is almost
+
+certainly a shared classification/vocabulary layer (a registered set of
+
+fact\_types and event\_types, with a rule for which table a given type
+
+belongs to), not a fix to either table in isolation - that layer is
+
+explicitly listed as future work below, not a precondition for this phase
+
+closing.
+
+
+
 \## Explicitly not built in this phase
 
 \- No Event-to-FinancialFact or Event-to-Claim relationship table.
 
-\- No event\_type vocabulary or validation against a fixed list.
+\- No event\_type vocabulary or validation against a fixed list, and no
+
+&#x20; shared Fact/Event classification layer (see risk note above).
+
+\- No duration support: event\_date is a single point in time; an event
+
+&#x20; with a start and end (e.g. a trading halt from 10:00 to 10:45) cannot
+
+&#x20; be represented without approximating to one date.
+
+\- No observed/derived/inferred distinction - every Event, like every
+
+&#x20; FinancialFact, is implicitly "observed," with no field marking a
+
+&#x20; computed or AI-inferred value as different in kind.
 
 \- No Challenger integration - the reasoning layer does not read Events yet.
 
