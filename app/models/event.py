@@ -22,6 +22,10 @@ class Event(Base):
     # after insertion. A correction is a NEW row whose supersedes_id points
     # back to the row it corrects.
     #
+    # observation_kind: see FinancialFact for the same distinction applied
+    # to events (e.g. an "observed" confirmed leadership change versus an
+    # "inferred" one flagged from indirect signals).
+    #
     # Time semantics (mirrors FinancialFact where the same distinction
     # applies):
     # - event_date: when the event occurred in the world (domain time).
@@ -42,6 +46,10 @@ class Event(Base):
             "supersedes_id IS NULL OR supersedes_id <> id",
             name="ck_event_no_self_supersession",
         ),
+        CheckConstraint(
+            "observation_kind IN ('observed', 'derived', 'inferred')",
+            name="ck_event_observation_kind",
+        ),
     )
 
     id = Column(Integer, primary_key=True, index=True)
@@ -52,6 +60,7 @@ class Event(Base):
 
     event_type = Column(String, nullable=False, index=True)
     description = Column(String, nullable=False)
+    observation_kind = Column(String, nullable=False, server_default="observed")
 
     event_date = Column(Date, nullable=True)
     published_at = Column(DateTime, nullable=True)

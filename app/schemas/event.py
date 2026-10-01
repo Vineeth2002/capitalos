@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, model_validator
@@ -6,13 +7,19 @@ from pydantic import BaseModel, model_validator
 from app.schemas.research_source import ResearchSourceResponse
 
 
+class EventObservationKind(str, Enum):
+    observed = "observed"
+    derived = "derived"
+    inferred = "inferred"
+
+
 class EventCreate(BaseModel):
-    # Exactly one of entity_id / security_id / listing_id must be supplied.
     entity_id: Optional[int] = None
     security_id: Optional[int] = None
     listing_id: Optional[int] = None
     event_type: str
     description: str
+    observation_kind: EventObservationKind = EventObservationKind.observed
     event_date: Optional[date] = None
     published_at: Optional[datetime] = None
     source_id: Optional[int] = None
@@ -39,6 +46,7 @@ class EventResponse(BaseModel):
     listing_id: Optional[int]
     event_type: str
     description: str
+    observation_kind: EventObservationKind
     event_date: Optional[date]
     published_at: Optional[datetime]
     source_id: Optional[int]

@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, model_validator
@@ -7,8 +8,13 @@ from pydantic import BaseModel, model_validator
 from app.schemas.research_source import ResearchSourceResponse
 
 
+class ObservationKind(str, Enum):
+    observed = "observed"
+    derived = "derived"
+    inferred = "inferred"
+
+
 class FinancialFactCreate(BaseModel):
-    # Exactly one of entity_id / security_id / listing_id must be supplied.
     entity_id: Optional[int] = None
     security_id: Optional[int] = None
     listing_id: Optional[int] = None
@@ -16,6 +22,7 @@ class FinancialFactCreate(BaseModel):
     value_numeric: Decimal
     unit: Optional[str] = None
     currency: Optional[str] = None
+    observation_kind: ObservationKind = ObservationKind.observed
     period_start: Optional[date] = None
     period_end: Optional[date] = None
     as_of_date: Optional[date] = None
@@ -46,6 +53,7 @@ class FinancialFactResponse(BaseModel):
     value_numeric: Decimal
     unit: Optional[str]
     currency: Optional[str]
+    observation_kind: ObservationKind
     period_start: Optional[date]
     period_end: Optional[date]
     as_of_date: Optional[date]

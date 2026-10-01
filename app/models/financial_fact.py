@@ -21,6 +21,12 @@ class FinancialFact(Base):
     # APPEND-ONLY: rows are never updated after insertion. A correction is a
     # NEW row whose supersedes_id points back to the row it corrects.
     #
+    # observation_kind distinguishes observed (directly sourced), derived
+    # (computed from other facts), and inferred (estimated/AI-produced)
+    # values. No derivation lineage is stored yet - that is a future
+    # Fact-to-Fact relationship, not a precondition for this distinction
+    # to exist.
+    #
     # Time semantics (timestamps are naive UTC, matching the rest of the schema):
     # - period_start/period_end: reporting or measurement period (flow measures).
     # - as_of_date: point-in-time observation date (stock measures such as price).
@@ -40,6 +46,10 @@ class FinancialFact(Base):
             "supersedes_id IS NULL OR supersedes_id <> id",
             name="ck_financial_fact_no_self_supersession",
         ),
+        CheckConstraint(
+            "observation_kind IN ('observed', 'derived', 'inferred')",
+            name="ck_financial_fact_observation_kind",
+        ),
     )
 
     id = Column(Integer, primary_key=True, index=True)
@@ -52,6 +62,7 @@ class FinancialFact(Base):
     value_numeric = Column(Numeric(precision=20, scale=6), nullable=False)
     unit = Column(String, nullable=True)
     currency = Column(String, nullable=True)
+    observation_kind = Column(String, nullable=False, server_default="observed")
 
     period_start = Column(Date, nullable=True)
     period_end = Column(Date, nullable=True)

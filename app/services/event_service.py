@@ -65,6 +65,7 @@ def create_event(db, event_in):
         listing_id=event_in.listing_id,
         event_type=event_in.event_type,
         description=event_in.description,
+        observation_kind=event_in.observation_kind.value,
         event_date=event_in.event_date,
         published_at=_naive_utc(event_in.published_at),
         source_id=event_in.source_id,

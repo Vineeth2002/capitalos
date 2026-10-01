@@ -69,6 +69,7 @@ def create_fact(db, fact_in, commit=True):
         value_numeric=fact_in.value_numeric,
         unit=fact_in.unit,
         currency=fact_in.currency,
+        observation_kind=fact_in.observation_kind.value,
         period_start=fact_in.period_start,
         period_end=fact_in.period_end,
         as_of_date=fact_in.as_of_date,
