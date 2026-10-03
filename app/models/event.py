@@ -7,6 +7,7 @@ from sqlalchemy import (
     ForeignKey,
     CheckConstraint,
 )
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.db.base import Base
@@ -72,3 +73,5 @@ class Event(Base):
     supersession_reason = Column(String, nullable=True)
 
     recorded_at = Column(DateTime, server_default=func.now())
+
+    source = relationship("ResearchSource")

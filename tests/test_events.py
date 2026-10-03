@@ -265,3 +265,46 @@ def test_get_and_list_events(client):
     assert client.get(f"/events/{created['id']}").status_code == 200
     assert len(client.get("/events", params={"entity_id": entity_id}).json()) == 1
     assert client.get("/events/999999").status_code == 404
+
+def create_research_source(client, **overrides):
+    payload = {
+        "title": "Test Filing for Event",
+        "url": "https://example.com/filing",
+        "publisher": "Test Publisher",
+        "source_type": "filing",
+    }
+    payload.update(overrides)
+    return client.post("/research-sources", json=payload)
+
+
+def test_event_with_valid_source_returns_populated_source(client):
+    source = create_research_source(client).json()
+    entity_id = make_entity(client)
+
+    created = post_event(
+        client,
+        entity_id=entity_id,
+        event_type="leadership_change",
+        description="CEO resigned",
+        source_id=source["id"],
+    ).json()
+
+    assert created["source_id"] == source["id"]
+    assert created["source"] is not None
+    assert created["source"]["id"] == source["id"]
+    assert created["source"]["title"] == "Test Filing for Event"
+
+    fetched = client.get(f"/events/{created['id']}").json()
+    assert fetched["source"] is not None
+    assert fetched["source"]["id"] == source["id"]
+
+
+def test_event_without_source_has_null_source(client):
+    entity_id = make_entity(client)
+    created = post_event(client, entity_id=entity_id).json()
+
+    assert created["source_id"] is None
+    assert created["source"] is None
+
+    fetched = client.get(f"/events/{created['id']}").json()
+    assert fetched["source"] is None
