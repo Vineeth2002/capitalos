@@ -23,6 +23,7 @@ from app.models import (  # noqa: F401 - ensures tables are registered
     financial_fact,
     event,
     fact_classification,
+    claim_evidence,
 )
 from app.api import (
     entities,
@@ -38,6 +39,7 @@ from app.api import (
     listings,
     events,
     fact_classifications,
+    claim_evidence,
 )
 
 app = FastAPI(title=settings.APP_NAME)
@@ -60,6 +62,7 @@ app.include_router(listings.router)
 app.include_router(financial_facts.router)
 app.include_router(events.router)
 app.include_router(fact_classifications.router)
+app.include_router(claim_evidence.router)
 
 
 @app.get("/", response_class=HTMLResponse)

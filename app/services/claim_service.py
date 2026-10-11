@@ -1,6 +1,9 @@
 from sqlalchemy.orm import Session
 
+from app.models.challenge_output import ChallengeOutputClaim
 from app.models.claim import Claim
+from app.models.claim_evidence import ClaimEvidence
+from app.models.claim_relationship import ClaimRelationship
 from app.schemas.claim import ClaimCreate, ClaimUpdate
 
 
@@ -29,9 +32,6 @@ def update_claim(db: Session, claim: Claim, claim_in: ClaimUpdate) -> Claim:
     db.refresh(claim)
     return claim
 
-from app.models.claim_relationship import ClaimRelationship
-from app.models.challenge_output import ChallengeOutputClaim
-
 
 def claim_has_dependencies(db: Session, claim_id: int) -> bool:
     relationship_exists = (
@@ -50,7 +50,15 @@ def claim_has_dependencies(db: Session, claim_id: int) -> bool:
         .filter(ChallengeOutputClaim.claim_id == claim_id)
         .first()
     )
-    return challenge_link_exists is not None
+    if challenge_link_exists:
+        return True
+
+    evidence_exists = (
+        db.query(ClaimEvidence)
+        .filter(ClaimEvidence.claim_id == claim_id)
+        .first()
+    )
+    return evidence_exists is not None
 
 
 def delete_claim(db: Session, claim: Claim) -> None:

@@ -1,30 +1,32 @@
 from datetime import datetime
-from typing import Optional, Literal
-from pydantic import BaseModel
+from typing import Optional
 
-ResearchCaseStatus = Literal["active", "archived"]
+from pydantic import BaseModel
 
 
 class ResearchCaseCreate(BaseModel):
     entity_id: Optional[int] = None
     title: str
     description: Optional[str] = None
-    status: ResearchCaseStatus = "active"
+    status: str = "active"
+    knowledge_cutoff_at: Optional[datetime] = None
 
 
 class ResearchCaseUpdate(BaseModel):
     entity_id: Optional[int] = None
     title: Optional[str] = None
     description: Optional[str] = None
-    status: Optional[ResearchCaseStatus] = None
+    status: Optional[str] = None
+    knowledge_cutoff_at: Optional[datetime] = None
 
 
 class ResearchCaseResponse(BaseModel):
     id: int
-    entity_id: Optional[int] = None
+    entity_id: Optional[int]
     title: str
-    description: Optional[str] = None
-    status: ResearchCaseStatus
+    description: Optional[str]
+    status: str
+    knowledge_cutoff_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
 
