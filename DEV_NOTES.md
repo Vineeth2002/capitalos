@@ -58,7 +58,7 @@ notepad path\to\file.py
 ```cmd
 git status
 git add .
-git commit -m "Describe the change"
+git commit -m "Phase 13: Financial World Model"
 git push origin main
 ```
 
